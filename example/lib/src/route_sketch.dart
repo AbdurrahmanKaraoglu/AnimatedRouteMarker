@@ -97,6 +97,13 @@ class _SketchPainter extends CustomPainter {
     for (final Marker marker in sketch.markers) {
       final Offset center = project(marker.position);
       final Color color = sketch.colors[marker.markerId] ?? Colors.black;
+      if (!marker.flat) {
+        // Static markers (route start and end) are plain dots.
+        canvas.drawCircle(center, 9, Paint()..color = haloColor);
+        canvas.drawCircle(center, 7, Paint()..color = color);
+        canvas.drawCircle(center, 3, Paint()..color = haloColor);
+        continue;
+      }
       canvas.drawCircle(center, 13, Paint()..color = haloColor);
       canvas.drawCircle(center, 11, Paint()..color = color);
       // An arrow pointing in the marker's heading (north is up).
@@ -106,10 +113,10 @@ class _SketchPainter extends CustomPainter {
         ..rotate(marker.rotation * math.pi / 180);
       canvas.drawPath(
         Path()
-          ..moveTo(0, -7)
-          ..lineTo(5, 5)
-          ..lineTo(0, 2)
-          ..lineTo(-5, 5)
+          ..moveTo(0, -9)
+          ..lineTo(5, 6)
+          ..lineTo(0, 2.5)
+          ..lineTo(-5, 6)
           ..close(),
         Paint()..color = Colors.white,
       );

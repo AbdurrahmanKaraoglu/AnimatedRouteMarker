@@ -155,6 +155,16 @@ class _LivePageState extends State<LivePage> with TickerProviderStateMixin {
                     controllers: <AnimatedRouteMarkerController>[_vehicle],
                     bounds: taxiRoute,
                     colors: <MarkerId, Color>{const MarkerId('live'): taxiColor},
+                    // The road the simulated vehicle drives on, as a guide.
+                    staticPolylines: <Polyline>{
+                      Polyline(
+                        polylineId: const PolylineId('road'),
+                        points: taxiRoute,
+                        color: scheme.outline.withValues(alpha: 0.35),
+                        width: 8,
+                        zIndex: -1,
+                      ),
+                    },
                     onMapCreated: _onMapCreated,
                   ),
                 ),

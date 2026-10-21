@@ -194,6 +194,8 @@ class _RoutePageState extends State<RoutePage> with TickerProviderStateMixin {
                       const MarkerId('courier'): courierColor,
                       const MarkerId('taxi'): taxiColor,
                       const MarkerId('truck'): truckColor,
+                      const MarkerId('start'): courierColor,
+                      const MarkerId('end'): courierColor,
                     },
                     staticMarkers: _endpoints,
                     onMapCreated: _onMapCreated,
@@ -234,13 +236,23 @@ class _RoutePageState extends State<RoutePage> with TickerProviderStateMixin {
                       side: BorderSide.none,
                       backgroundColor: scheme.secondaryContainer,
                     ),
-                    const Spacer(),
-                    Flexible(
-                      child: Text(
-                        '${strings.distance(progress.distance)} / ${strings.distance(progress.totalDistance)}'
-                        ' · ${strings.duration(left)}',
-                        style: text.bodySmall,
-                        textAlign: TextAlign.end,
+                    const SizedBox(width: Gap.sm),
+                    Expanded(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              Text(
+                                '${strings.distance(progress.distance)} / ${strings.distance(progress.totalDistance)}',
+                                style: text.bodySmall,
+                              ),
+                              Text(strings.duration(left), style: text.bodySmall),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],

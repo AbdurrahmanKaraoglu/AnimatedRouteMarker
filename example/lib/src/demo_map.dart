@@ -15,6 +15,7 @@ class DemoMap extends StatelessWidget {
     required this.bounds,
     required this.colors,
     this.staticMarkers = const <Marker>{},
+    this.staticPolylines = const <Polyline>{},
     this.onMapCreated,
   });
 
@@ -23,6 +24,7 @@ class DemoMap extends StatelessWidget {
   final List<LatLng> bounds;
   final Map<MarkerId, Color> colors;
   final Set<Marker> staticMarkers;
+  final Set<Polyline> staticPolylines;
   final MapCreatedCallback? onMapCreated;
 
   @override
@@ -31,13 +33,14 @@ class DemoMap extends StatelessWidget {
       controllers: controllers,
       builder: (BuildContext context, Set<Marker> markers, Set<Polyline> polylines) {
         final Set<Marker> all = <Marker>{...staticMarkers, ...markers};
+        final Set<Polyline> lines = <Polyline>{...staticPolylines, ...polylines};
         if (!hasMapsKey) {
-          return RouteSketch(bounds: bounds, markers: all, polylines: polylines, colors: colors);
+          return RouteSketch(bounds: bounds, markers: all, polylines: lines, colors: colors);
         }
         return GoogleMap(
           initialCameraPosition: istanbul,
           markers: all,
-          polylines: polylines,
+          polylines: lines,
           onMapCreated: onMapCreated,
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
