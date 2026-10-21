@@ -1,0 +1,27 @@
+name: animated_route_marker_example
+description: Demonstrates the animated_route_marker package.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  animated_route_marker:
+    path: ../
+  google_maps_flutter: ^2.13.0
+  # Only used by the example: routes and marker icons from the sibling packages.
+  google_maps_polyline: ^2.2.0
+  marker_crafter: ^2.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
