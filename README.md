@@ -8,8 +8,6 @@ travel without sudden spins.
 
 *[Türkçe açıklama aşağıda.](#türkçe)*
 
-<!-- TODO: add a GIF recorded from the example app (example/) here. -->
-
 ## Features
 
 - **Route playback** at a constant speed in m/s, or over a total duration. Distances and headings are computed on
@@ -22,7 +20,8 @@ travel without sudden spins.
 - **Controls**: `play`, `pause`, `seek`, `seekToDistance`, `stop`, `loop`, changing `speed` while moving, an
   `onCompleted` callback, progress as a `ValueListenable<RouteProgress>` and as a `Stream<RouteProgress>`.
 - **Camera follow**: keep the map centered on the marker, optionally with zoom, tilt and map rotation.
-- **Travelled route in a different color** (optional): the route is split into a passed and a remaining polyline.
+- **Travelled route in a different color** (optional): the route is split into a passed and a remaining polyline,
+  rebuilt every few meters rather than on every frame, so long routes do not flood the map with updates.
 - **Many markers at once**: one controller per marker, one `AnimatedRouteMarkers` widget for all of them.
 - **No leaks**: each controller uses a `Ticker` from the `vsync` you pass (like `AnimationController`) and
   releases it in `dispose`. Tests check that disposing a screen mid-animation leaves no ticker running.
@@ -48,7 +47,7 @@ for several markers at once.
 
 ```yaml
 dependencies:
-  animated_route_marker: ^0.1.0
+  animated_route_marker: ^0.1.1
   google_maps_flutter: ^2.13.0
 ```
 
@@ -127,8 +126,7 @@ courier.progressStream.listen((p) => print('${p.distance} / ${p.totalDistance} m
 
 ### Live positions
 
-Call `animateTo` whenever a new location arrives, for example from
-[advanced_background_locator](https://pub.dev/packages/advanced_background_locator) or any location stream:
+Call `animateTo` whenever a new location arrives, from any location stream:
 
 ```dart
 final vehicle = AnimatedRouteMarkerController(
@@ -146,13 +144,18 @@ locationStream.listen((location) {
 });
 ```
 
-The first position places the marker directly; later ones are interpolated from the current point. Use
-`jumpTo(position)` to place the marker without animation.
+The first position places the marker directly; later ones are interpolated from the current point. Pass
+`duration:` to override `liveDuration` for one fix (`Duration.zero` places it at once), and `bearing:` to use the
+heading reported by the GPS instead of the direction between two fixes. Use `jumpTo(position)` to place the marker
+without animation.
 
 ### Camera follow
 
 ```dart
-GoogleMap(onMapCreated: (map) => courier.followCamera(map, zoom: 16));
+GoogleMap(
+  initialCameraPosition: start,
+  onMapCreated: (map) => courier.followCamera(map, zoom: 16),
+);
 // Navigation style: tilted, map turns with the marker.
 courier.followCamera(map, zoom: 17, tilt: 45, rotate: true);
 courier.stopFollowingCamera();
@@ -164,11 +167,27 @@ sent one at a time; frames that arrive while the map is busy are merged.
 ### Several markers
 
 Create one controller per vehicle (all with the same `vsync` from a `TickerProviderStateMixin`) and pass them all
-to `AnimatedRouteMarkers`. Add your static markers in the builder: `markers: {...markers, ...myMarkers}`.
+to `AnimatedRouteMarkers`; the map is rebuilt once per frame however many markers move. Add your static markers in
+the builder: `markers: {...markers, ...myMarkers}`. Dispose every controller in your state's `dispose`.
+
+## Works well with
+
+animated_route_marker depends only on `google_maps_flutter`. These packages by the same author fit around it
+(none of them is a dependency):
+
+| Package | Use with animated_route_marker |
+|---|---|
+| [google_maps_polyline](https://pub.dev/packages/google_maps_polyline) | Get a route from the Directions API or decode an encoded polyline → `setRoute` |
+| [marker_crafter](https://pub.dev/packages/marker_crafter) | Draw the vehicle icon on a canvas → `markerTemplate` |
+| [advanced_background_locator](https://pub.dev/packages/advanced_background_locator) | Real device locations, also in the background → `animateTo` |
+| [route_simulator](https://pub.dev/packages/route_simulator) | Realistic fake GPS along a route for demos and tests → `animateTo` |
+
+Also by the same author: [advanced_geofence](https://pub.dev/packages/advanced_geofence),
+[turkish_kit](https://pub.dev/packages/turkish_kit) and [flutter_toastify](https://pub.dev/packages/flutter_toastify).
 
 ### Routes from google_maps_polyline, icons from marker_crafter
 
-The package has no dependency on them, but they fit together (see `example/`):
+See `example/` for a complete app:
 
 ```dart
 import 'package:google_maps_polyline/google_maps_polyline.dart';
@@ -187,6 +206,54 @@ final route = [for (final p in result.points) LatLng(p.latitude, p.longitude)];
 final icon = await createLocationMarkerBitmap(Colors.indigo, size: 34);
 courier.markerTemplate = courier.markerTemplate.copyWith(iconParam: icon);
 courier.setRoute(route, speed: 12, autoPlay: true);
+```
+
+### Locations from advanced_background_locator
+
+Its callbacks run in a background isolate, so send each location to the UI isolate through a port:
+
+```dart
+import 'dart:isolate';
+import 'dart:ui';
+
+import 'package:advanced_background_locator/advanced_background_locator.dart';
+
+const String locationPortName = 'animated_route_marker_locations';
+
+@pragma('vm:entry-point')
+void onLocation(LocationDto location) {
+  IsolateNameServer.lookupPortByName(locationPortName)?.send(<double>[location.latitude, location.longitude]);
+}
+
+// In your State (next to the controller):
+final ReceivePort port = ReceivePort();
+
+void listenToLocations() {
+  IsolateNameServer.removePortNameMapping(locationPortName);
+  IsolateNameServer.registerPortWithName(port.sendPort, locationPortName);
+  port.listen((dynamic data) {
+    final List<double> latLng = (data as List<dynamic>).cast<double>();
+    vehicle.animateTo(LatLng(latLng[0], latLng[1]));
+  });
+}
+// Register `onLocation` with AdvancedBackgroundLocator.registerLocationUpdate (see its README), and in dispose:
+// port.close(); IsolateNameServer.removePortNameMapping(locationPortName);
+```
+
+Set `liveDuration` to the locator's update interval (`AndroidSettings.interval`).
+
+### Simulated GPS from route_simulator
+
+```dart
+import 'package:route_simulator/route_simulator.dart';
+
+final simulator = RouteSimulator(
+  route: SimRoute.fromEncodedPolyline(encoded),
+  profile: const SpeedProfile.realistic(cruiseSpeed: 50 / 3.6),
+  noise: const GpsNoise(horizontalError: 4, seed: 42),
+);
+simulator.locations.listen((l) => vehicle.animateTo(LatLng(l.latitude, l.longitude)));
+simulator.start();
 ```
 
 ### Geometry helpers
@@ -231,7 +298,9 @@ konumlarına doğru akıcı biçimde hareket ettirir ve yönünü ani dönüşle
 - **Kamera kilidi**: `followCamera(map, zoom: 16)`; isteğe bağlı eğim ve haritanın marker ile dönmesi.
 - **Geçilen yol farklı renkte** (isteğe bağlı) ve **aynı anda birden fazla marker** (`AnimatedRouteMarkers`).
 - **Sızıntı yok**: her controller verdiğiniz `vsync`'ten bir `Ticker` alır ve `dispose`'da bırakır.
-- Çekirdek API `List<LatLng>` alır; `google_maps_polyline` ve `marker_crafter` yalnızca example'da kullanılır.
+- Geçilen/kalan çizgiler her karede değil birkaç metrede bir yenilenir (`RoutePolylineStyle.refreshDistance`);
+  uzun rotalar haritaya gereksiz yük bindirmez.
+- Çekirdek API `List<LatLng>` alır; tek bağımlılık `google_maps_flutter`.
 
 **Mevcut paketlerden farkı** (22 Ekim 2026'da pub.dev'de incelendi): `flutter_animarker` Nisan 2021'den beri
 güncellenmiyor ve açık hata kayıtları var (animasyonun durması, 180°'de uzun yoldan dönme). `animated_marker` ve
@@ -258,12 +327,26 @@ AnimatedRouteMarkers(
   ),
 );
 
-// Canlı konum:
+// Canlı konum (GPS'in bildirdiği yön varsa `bearing:` ile verilebilir):
 konumAkisi.listen((k) => kurye.animateTo(LatLng(k.latitude, k.longitude)));
 
 // dispose içinde:
 kurye.dispose();
 ```
+
+**Birlikte kullanım** (hiçbiri bağımlılık değildir):
+
+- [google_maps_polyline](https://pub.dev/packages/google_maps_polyline): Directions API'den rota alır ya da
+  kodlanmış polyline'ı çözer → `setRoute`.
+- [marker_crafter](https://pub.dev/packages/marker_crafter): araç ikonunu Canvas ile çizer → `markerTemplate`.
+- [advanced_background_locator](https://pub.dev/packages/advanced_background_locator): arka planda da gerçek
+  konum → `animateTo`. Geri çağrılar ayrı bir isolate'te çalışır; konumu `IsolateNameServer` ile arayüze gönderin
+  (yukarıdaki İngilizce örnek).
+- [route_simulator](https://pub.dev/packages/route_simulator): rota boyunca gerçekçi sahte GPS, demo ve test için
+  → `animateTo`.
+
+Aynı geliştiricinin diğer paketleri: [advanced_geofence](https://pub.dev/packages/advanced_geofence),
+[turkish_kit](https://pub.dev/packages/turkish_kit), [flutter_toastify](https://pub.dev/packages/flutter_toastify).
 
 **Örnek uygulama**: `example/` Türkçe ve İngilizcedir. Harita anahtarı `example/android/local.properties`
 dosyasındaki `MAPS_API_KEY` değerinden okunur; anahtar yoksa uygulama çökmez ve aynı animasyonu haritasız bir

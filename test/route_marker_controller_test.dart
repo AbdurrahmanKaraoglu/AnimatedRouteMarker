@@ -239,6 +239,54 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('a zero duration arrives at once without NaN', (WidgetTester tester) async {
+      final AnimatedRouteMarkerController controller = create();
+      addTearDown(controller.dispose);
+      controller.animateTo(start);
+      expect(controller.animateTo(north100, duration: Duration.zero), isTrue);
+      expect(controller.marker.position, north100);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(controller.marker.position, north100);
+      expect(controller.value.bearing.isNaN, isFalse);
+      expect(controller.value.distance.isFinite, isTrue);
+      expect(controller.status, RouteAnimationStatus.completed);
+    });
+
+    testWidgets('a bearing given with the fix wins over the leg direction', (WidgetTester tester) async {
+      final AnimatedRouteMarkerController controller = create(rotationDuration: Duration.zero);
+      addTearDown(controller.dispose);
+      controller.animateTo(start);
+      // Moving north, but the GPS reports a heading of 45°.
+      controller.animateTo(north100, duration: const Duration(seconds: 2), bearing: 45);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(controller.value.bearing, closeTo(45, 1e-9));
+      // Without a bearing the direction of travel is used again.
+      final LatLng from = controller.marker.position;
+      controller.animateTo(east100, duration: const Duration(seconds: 1));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(controller.value.bearing, closeTo(GeoMath.bearing(from, east100), 0.1));
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('jumpConfirmations counts consecutive agreeing fixes', (WidgetTester tester) async {
+      final AnimatedRouteMarkerController controller = create()
+        ..jumpDistance = 500
+        ..jumpConfirmations = 3;
+      addTearDown(controller.dispose);
+      controller.animateTo(start);
+      final LatLng far = offset(start, 5000, 90);
+      expect(controller.animateTo(far), isFalse);
+      // A second far fix that disagrees with the first starts counting over.
+      expect(controller.animateTo(offset(start, 5000, 270)), isFalse);
+      expect(controller.animateTo(far), isFalse);
+      expect(controller.animateTo(offset(far, 10, 0)), isFalse);
+      expect(controller.marker.position, start);
+      expect(controller.animateTo(offset(far, 20, 0)), isTrue);
+      expect(controller.marker.position, offset(far, 20, 0));
+    });
+
     testWidgets('paused live mode waits for play', (WidgetTester tester) async {
       final AnimatedRouteMarkerController controller = create();
       addTearDown(controller.dispose);
@@ -298,6 +346,31 @@ void main() {
     controller.polylineStyle = null;
     controller.seek(0.2);
     expect(controller.polylines, isEmpty);
+  });
+
+  testWidgets('polylines are rebuilt only every refreshDistance meters', (WidgetTester tester) async {
+    final AnimatedRouteMarkerController controller = create(
+      polylineStyle: const RoutePolylineStyle(refreshDistance: 5),
+    );
+    addTearDown(controller.dispose);
+    controller.setRoute(<LatLng>[start, north100, east100], speed: 10, autoPlay: true);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final Set<Polyline> first = controller.polylines;
+    await tester.pump(const Duration(milliseconds: 100));
+    // Moved 1 m: the same lines (no new data for the map).
+    expect(identical(controller.polylines, first), isTrue);
+    await tester.pump(const Duration(seconds: 1));
+    // Moved 11 m: rebuilt, ending at the marker.
+    expect(identical(controller.polylines, first), isFalse);
+    final Polyline passed = controller.polylines.firstWhere((Polyline l) => l.polylineId.value == 'car#passed');
+    expect(passed.points.last, controller.marker.position);
+
+    // At the end the lines are exact again.
+    await tester.pump(const Duration(seconds: 30));
+    expect(controller.status, RouteAnimationStatus.completed);
+    expect(controller.polylines.map((Polyline l) => l.polylineId.value), <String>['car#passed']);
+    expect(controller.polylines.single.points.last, east100);
   });
 
   testWidgets('camera follows the marker, one move at a time', (WidgetTester tester) async {

@@ -93,7 +93,8 @@ class RoutePolylineStyle {
     this.width = 6,
     this.passedWidth,
     this.zIndex = 0,
-  });
+    this.refreshDistance = 2,
+  }) : assert(refreshDistance >= 0);
 
   /// Color of the part still ahead of the marker.
   final Color remainingColor;
@@ -108,6 +109,13 @@ class RoutePolylineStyle {
   final int? passedWidth;
 
   final int zIndex;
+
+  /// The lines are rebuilt only after the marker has moved this many meters
+  /// (and at the start and end of the route), not on every frame. Each
+  /// rebuild sends every point of the route to the map again, which adds up
+  /// on long routes. The gap this leaves at the marker is hidden under its
+  /// icon; use 0 to rebuild on every frame.
+  final double refreshDistance;
 }
 
 class _CameraFollow {
@@ -223,6 +231,8 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
   Duration _lastElapsed = Duration.zero;
   late RouteProgress _value;
 
+  /// Heading given to [animateTo]; overrides the direction of the leg.
+  double? _legBearing;
   final List<LatLng> _trail = <LatLng>[];
   LatLng? _pendingJump;
   int _pendingJumpCount = 0;
@@ -232,6 +242,8 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
   bool _cameraDirty = false;
 
   Set<Polyline>? _polylineCache;
+  RoutePath? _polylinePath;
+  double _polylineDistance = 0;
   bool _disposed = false;
 
   @override
@@ -291,6 +303,7 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     _mode = RouteAnimationMode.route;
     _path = path;
     _distance = 0;
+    _legBearing = null;
     _trail.clear();
     _clearPendingJump();
     if (speed != null) {
@@ -387,7 +400,11 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
   /// Returns false when the position was ignored: it was closer than
   /// [minMoveDistance], or it is an unconfirmed jump (see [jumpDistance]).
   /// The first position (and every confirmed jump) places the marker
-  /// directly. While [pause]d, the marker waits and moves on [play].
+  /// directly, and so does a zero [duration]. While [pause]d, the marker
+  /// waits and moves on [play].
+  ///
+  /// [bearing] (for example the heading reported by the GPS) is used instead
+  /// of the direction from the previous position to this one.
   bool animateTo(LatLng position, {Duration? duration, double? bearing}) {
     final RoutePath? path = _path;
     if (path == null) {
@@ -425,14 +442,15 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     final RoutePath leg = RoutePath(<LatLng>[_position, position]);
     _path = leg;
     _distance = 0;
-    if (leg.length > 0) {
-      _speed = legDuration > Duration.zero
-          ? leg.length / (legDuration.inMicroseconds / Duration.microsecondsPerSecond)
-          : double.infinity;
+    _legBearing = bearing == null ? null : GeoMath.normalizeAngle(bearing);
+    if (legDuration > Duration.zero) {
+      _speed = leg.length / (legDuration.inMicroseconds / Duration.microsecondsPerSecond);
+    } else {
+      // No time to move: arrive at once; the heading still eases (below).
+      _distance = leg.length;
+      _position = position;
     }
-    if (bearing != null) {
-      _targetBearing = GeoMath.normalizeAngle(bearing);
-    }
+    _targetBearing = _legBearing ?? GeoMath.bearing(leg.points.first, position);
     if (_status != RouteAnimationStatus.paused) {
       _status = RouteAnimationStatus.playing;
       _startTicker();
@@ -452,6 +470,7 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     _position = position;
     _trail.clear();
     _clearPendingJump();
+    _legBearing = null;
     if (bearing != null) {
       _rotation = _targetBearing = GeoMath.normalizeAngle(bearing);
     }
@@ -543,7 +562,7 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     final RoutePosition at = path.positionAt(_distance);
     _position = at.position;
     if (path.length > 0 && _distance < path.length) {
-      _targetBearing = at.bearing;
+      _targetBearing = _legBearing ?? at.bearing;
     }
     _rotation = _smoothRotation(_rotation, _targetBearing, dt);
 
@@ -608,12 +627,15 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     final List<LatLng> passed;
     final List<LatLng> remaining;
     if (_mode == RouteAnimationMode.route) {
-      passed = path.passedPoints(_distance);
-      remaining = path.remainingPoints(_distance);
+      // No zero-length lines at the start and the end of the route.
+      passed = _distance > 0 ? path.passedPoints(_distance) : const <LatLng>[];
+      remaining = _distance < path.length ? path.remainingPoints(_distance) : const <LatLng>[];
     } else {
       passed = <LatLng>[..._trail, _position];
       remaining = _distance < path.length ? <LatLng>[_position, path.points.last] : const <LatLng>[];
     }
+    _polylinePath = path;
+    _polylineDistance = _distance;
     final String id = _template.markerId.value;
     final Color? passedColor = style.passedColor;
     return <Polyline>{
@@ -655,11 +677,25 @@ class AnimatedRouteMarkerController extends ChangeNotifier implements ValueListe
     );
   }
 
+  bool _polylinesStillValid() {
+    final RoutePolylineStyle? style = _polylineStyle;
+    final RoutePath? path = _path;
+    return _polylineCache != null &&
+        style != null &&
+        path != null &&
+        identical(path, _polylinePath) &&
+        _distance > 0 &&
+        _distance < path.length &&
+        (_distance - _polylineDistance).abs() < style.refreshDistance;
+  }
+
   void _emit() {
     if (_disposed) {
       return;
     }
-    _polylineCache = null;
+    if (!_polylinesStillValid()) {
+      _polylineCache = null;
+    }
     _value = _snapshot();
     notifyListeners();
     if (_streamController.hasListener) {
