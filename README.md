@@ -47,7 +47,7 @@ for several markers at once.
 
 ```yaml
 dependencies:
-  animated_route_marker: ^0.1.1
+  animated_route_marker: ^0.1.2
   google_maps_flutter: ^2.13.0
 ```
 
@@ -182,9 +182,6 @@ animated_route_marker depends only on `google_maps_flutter`. These packages by t
 | [advanced_background_locator](https://pub.dev/packages/advanced_background_locator) | Real device locations, also in the background → `animateTo` |
 | [route_simulator](https://pub.dev/packages/route_simulator) | Realistic fake GPS along a route for demos and tests → `animateTo` |
 
-Also by the same author: [advanced_geofence](https://pub.dev/packages/advanced_geofence),
-[turkish_kit](https://pub.dev/packages/turkish_kit) and [flutter_toastify](https://pub.dev/packages/flutter_toastify).
-
 ### Routes from google_maps_polyline, icons from marker_crafter
 
 See `example/` for a complete app:
@@ -275,6 +272,20 @@ MAPS_API_KEY=your-key
 
 Without a key the example still opens and runs the same animation on a simple map-less preview.
 
+## Other packages by the same author
+
+- [google_maps_polyline](https://pub.dev/packages/google_maps_polyline): Google Directions routes and polyline encode/decode (pure Dart)
+- [marker_crafter](https://pub.dev/packages/marker_crafter): Custom Google Maps markers drawn with Canvas
+- [advanced_background_locator](https://pub.dev/packages/advanced_background_locator): Background location tracking plugin (Android/iOS)
+- [advanced_geofence](https://pub.dev/packages/advanced_geofence): Pure Dart geofencing engine: enter, exit and dwell events
+- [route_simulator](https://pub.dev/packages/route_simulator): Realistic fake GPS streams for testing and demos
+- [background_doctor](https://pub.dev/packages/background_doctor): Diagnoses why background work stops on Android and why the app was killed
+- [scan_tally](https://pub.dev/packages/scan_tally): Continuous barcode scanning for stock counts: dedupe, tally, feedback, GS1
+- [scan_tally_mobile_scanner](https://pub.dev/packages/scan_tally_mobile_scanner): mobile_scanner camera adapter for scan_tally
+- [turkish_kit](https://pub.dev/packages/turkish_kit): Turkish validators, money in words, casing, provinces, holidays (pure Dart)
+- [turkish_kit_flutter](https://pub.dev/packages/turkish_kit_flutter): Flutter widgets for turkish_kit: Turkish money field and input formatters
+- [flutter_toastify](https://pub.dev/packages/flutter_toastify): Animated toast notifications
+
 ## License
 
 MIT
@@ -345,12 +356,23 @@ kurye.dispose();
 - [route_simulator](https://pub.dev/packages/route_simulator): rota boyunca gerçekçi sahte GPS, demo ve test için
   → `animateTo`.
 
-Aynı geliştiricinin diğer paketleri: [advanced_geofence](https://pub.dev/packages/advanced_geofence),
-[turkish_kit](https://pub.dev/packages/turkish_kit), [flutter_toastify](https://pub.dev/packages/flutter_toastify).
-
 **Örnek uygulama**: `example/` Türkçe ve İngilizcedir. Harita anahtarı `example/android/local.properties`
 dosyasındaki `MAPS_API_KEY` değerinden okunur; anahtar yoksa uygulama çökmez ve aynı animasyonu haritasız bir
 önizlemede gösterir.
+
+## Aynı geliştiricinin diğer paketleri
+
+- [google_maps_polyline](https://pub.dev/packages/google_maps_polyline): Google Directions rotası ve polyline kodlama/çözme (saf Dart)
+- [marker_crafter](https://pub.dev/packages/marker_crafter): Canvas ile çizilen özel Google Maps işaretçileri
+- [advanced_background_locator](https://pub.dev/packages/advanced_background_locator): Arka planda konum takibi eklentisi (Android/iOS)
+- [advanced_geofence](https://pub.dev/packages/advanced_geofence): Saf Dart geofence motoru: giriş, çıkış ve bekleme olayları
+- [route_simulator](https://pub.dev/packages/route_simulator): Test ve demo için gerçekçi sahte GPS akışı
+- [background_doctor](https://pub.dev/packages/background_doctor): Android'de arka plan işinin neden durduğunu ve uygulamanın neden kapandığını teşhis eder
+- [scan_tally](https://pub.dev/packages/scan_tally): Stok sayımı için sürekli barkod okutma: tekrar ayıklama, sayım, geri bildirim, GS1
+- [scan_tally_mobile_scanner](https://pub.dev/packages/scan_tally_mobile_scanner): scan_tally için mobile_scanner kamera adaptörü
+- [turkish_kit](https://pub.dev/packages/turkish_kit): Türkçe doğrulayıcılar, tutarı yazıyla yazma, harf dönüşümü, il/ilçe, tatiller (saf Dart)
+- [turkish_kit_flutter](https://pub.dev/packages/turkish_kit_flutter): turkish_kit için Flutter bileşenleri: Türk biçimli para alanı ve girdi biçimleyicileri
+- [flutter_toastify](https://pub.dev/packages/flutter_toastify): Animasyonlu toast bildirimleri
 
 ## Lisans
 

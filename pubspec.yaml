@@ -1,6 +1,6 @@
 name: animated_route_marker
 description: Moves a google_maps_flutter marker smoothly along a route or towards live GPS positions at a real speed, with smooth bearing, play/pause/seek and camera follow.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/AbdurrahmanKaraoglu/AnimatedRouteMarker
 repository: https://github.com/AbdurrahmanKaraoglu/AnimatedRouteMarker
 issue_tracker: https://github.com/AbdurrahmanKaraoglu/AnimatedRouteMarker/issues

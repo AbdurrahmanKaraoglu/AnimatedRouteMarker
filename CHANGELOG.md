@@ -1,3 +1,7 @@
+## 0.1.2
+
+* DOCS: README lists the other 11 packages by the same author, with links to pub.dev.
+
 ## 0.1.1
 
 * Fixed: the `bearing` passed to `animateTo` was overwritten on the next frame; it is now used for that fix.
@@ -28,6 +32,10 @@
 * Example app in English and Turkish.
 
 ---
+
+## 0.1.2 (Türkçe)
+
+* DOCS: README'de aynı geliştiricinin diğer 11 paketi pub.dev bağlantılarıyla listeleniyor.
 
 ## 0.1.1 (Türkçe)
 
