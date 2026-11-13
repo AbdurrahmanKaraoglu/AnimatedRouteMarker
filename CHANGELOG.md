@@ -1,3 +1,11 @@
+## 0.1.3
+
+* Checked with Flutter 3.50 (and still 3.47): the package itself needed no changes; it only uses
+  `package:flutter/widgets.dart`, and its minimum Flutter version is unchanged.
+* Example: Android Gradle Plugin 9.3.1, Gradle 9.5.0 and Kotlin 2.4.20, which Flutter 3.50 requires; Material
+  widgets and localizations now come from `package:material_ui`.
+* Tests use `package:flutter/widgets.dart` instead of `material.dart`.
+
 ## 0.1.2
 
 * DOCS: README lists the other 11 packages by the same author, with links to pub.dev.
@@ -32,6 +40,14 @@
 * Example app in English and Turkish.
 
 ---
+
+## 0.1.3 (Türkçe)
+
+* Flutter 3.50 ile (ve hâlâ 3.47 ile) denendi: paketin kendisinde değişiklik gerekmedi; yalnızca
+  `package:flutter/widgets.dart` kullanıyor ve en düşük Flutter sürümü değişmedi.
+* Örnek: Flutter 3.50'nin istediği Android Gradle Plugin 9.3.1, Gradle 9.5.0 ve Kotlin 2.4.20; Material bileşenleri
+  ve yerelleştirmeler artık `package:material_ui`'dan geliyor.
+* Testler `material.dart` yerine `package:flutter/widgets.dart` kullanıyor.
 
 ## 0.1.2 (Türkçe)
 

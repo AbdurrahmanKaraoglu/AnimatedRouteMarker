@@ -1,5 +1,5 @@
 import 'package:animated_route_marker/animated_route_marker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The app language chosen in the language menu; null follows the device.
 final ValueNotifier<Locale?> appLocale = ValueNotifier<Locale?>(null);

@@ -47,7 +47,7 @@ for several markers at once.
 
 ```yaml
 dependencies:
-  animated_route_marker: ^0.1.2
+  animated_route_marker: ^0.1.3
   google_maps_flutter: ^2.13.0
 ```
 
